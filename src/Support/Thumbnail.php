@@ -30,6 +30,24 @@ class Thumbnail
         return $storage->url($thumbPath);
     }
 
+    /**
+     * Return thumb path if present, otherwise generate when allowed.
+     */
+    public static function ensure(Filesystem $storage, string $path, bool $knownMissing = false): ?string
+    {
+        $thumbPath = self::path($path);
+
+        if (! $knownMissing && $storage->exists($thumbPath)) {
+            return $thumbPath;
+        }
+
+        if (! config('media.thumb.generate', true)) {
+            return null;
+        }
+
+        return self::generate($storage, $path);
+    }
+
     public static function generate(Filesystem $storage, string $path): ?string
     {
         if (! self::isRasterImage($path)) {

@@ -23,13 +23,16 @@ return [
     |--------------------------------------------------------------------------
     |
     | On upload, a .thumb.webp sibling is written next to raster images.
-    | Existing files get a thumb the first time their folder is opened.
+    | Existing files without a thumb are generated the first time their
+    | folder is opened (lazy_on_list), up to lazy_max per request.
     |
     */
     'thumb' => [
         'width' => (int) env('MEDIA_THUMB_WIDTH', 320),
         'quality' => (int) env('MEDIA_THUMB_QUALITY', 80),
         'generate' => (bool) env('MEDIA_THUMB_GENERATE', true),
+        'lazy_on_list' => (bool) env('MEDIA_THUMB_LAZY_ON_LIST', true),
+        'lazy_max' => (int) env('MEDIA_THUMB_LAZY_MAX', 12),
     ],
 
 ];

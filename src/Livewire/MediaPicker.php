@@ -357,6 +357,12 @@ class MediaPicker extends Component
             ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
 
+        $listedPaths = collect($files)->flip();
+        $lazy = (bool) config('media.thumb.generate', true)
+            && (bool) config('media.thumb.lazy_on_list', true);
+        $lazyMax = max(0, (int) config('media.thumb.lazy_max', 12));
+        $generated = 0;
+
         $fileItems = collect($files)
             ->reject(fn (string $path) => basename($path) === '.keep' || str_ends_with(strtolower($path), '.thumb.webp'))
             ->filter(function (string $path) use ($search) {
@@ -365,26 +371,30 @@ class MediaPicker extends Component
                 }
 
                 return str_contains(mb_strtolower(basename($path)), $search);
-            });
-
-        $listedPaths = collect($files)->flip();
-
-        $fileItems = $fileItems
-            ->map(function (string $path) use ($storage, $listedPaths) {
+            })
+            ->sortBy(fn (string $path) => mb_strtolower(basename($path)), SORT_NATURAL | SORT_FLAG_CASE)
+            ->reverse()
+            ->take($limit)
+            ->map(function (string $path) use ($storage, $listedPaths, $lazy, $lazyMax, &$generated) {
                 $url = $storage->url($path);
                 $thumbPath = Thumbnail::path($path);
-                $thumbUrl = $listedPaths->has($thumbPath) ? $storage->url($thumbPath) : $url;
+                $hasThumb = $listedPaths->has($thumbPath);
+
+                if (! $hasThumb && $lazy && $generated < $lazyMax && Thumbnail::isRasterImage($path)) {
+                    if (Thumbnail::ensure($storage, $path, knownMissing: true)) {
+                        $hasThumb = true;
+                        $generated++;
+                    }
+                }
 
                 return [
                     'type' => 'file',
                     'path' => $path,
                     'name' => basename($path),
                     'url' => $url,
-                    'thumb_url' => $thumbUrl,
+                    'thumb_url' => $hasThumb ? $storage->url($thumbPath) : $url,
                 ];
             })
-            ->sortByDesc('name', SORT_NATURAL | SORT_FLAG_CASE)
-            ->take($limit)
             ->values();
 
         return $folderItems

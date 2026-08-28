@@ -18,6 +18,7 @@ return [
     'files' => 'Files',
     'empty_title' => 'This folder is empty',
     'empty_hint' => 'Upload a file or create a folder.',
+    'loading_folder' => 'Loading folder…',
     'delete' => 'Delete',
     'move' => 'Move',
     'select' => 'Select: :name',
