@@ -121,30 +121,47 @@
                             <p class="mt-1">Dosya yükleyin veya yeni klasör oluşturun.</p>
                         </div>
                     @else
-                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem;">
-                            @foreach ($entries as $item)
-                                @if ($item['type'] === 'folder')
-                                    <div class="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                                        <button
-                                            type="button"
-                                            wire:click="openFolder({{ \Illuminate\Support\Js::from($item['relative']) }})"
-                                            class="flex w-full flex-col items-center gap-2 px-2 py-6 text-center"
-                                        >
-                                            <svg class="h-10 w-10 text-[#0b5cab]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                <path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z"/>
-                                            </svg>
-                                            <span class="w-full truncate text-xs font-medium text-slate-700">{{ $item['name'] }}</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            wire:click="deleteFolder({{ \Illuminate\Support\Js::from($item['path']) }})"
-                                            wire:confirm="Boş klasör silinsin mi?"
-                                            class="absolute right-1.5 top-1.5 hidden rounded-md bg-white/95 px-1.5 py-0.5 text-[11px] font-semibold text-red-600 shadow group-hover:inline-flex"
-                                        >
-                                            Sil
-                                        </button>
-                                    </div>
-                                @else
+                        @php
+                            $folders = collect($entries)->where('type', 'folder')->values();
+                            $files = collect($entries)->where('type', 'file')->values();
+                        @endphp
+
+                        @if ($folders->isNotEmpty())
+                            <div class="mb-4 flex flex-col gap-1.5">
+                                <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Klasörler</div>
+                                <div class="flex flex-col gap-1">
+                                    @foreach ($folders as $item)
+                                        <div class="group flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 hover:border-[#0b5cab]/40 hover:bg-white">
+                                            <button
+                                                type="button"
+                                                wire:click="openFolder({{ \Illuminate\Support\Js::from($item['relative']) }})"
+                                                class="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                            >
+                                                <svg class="h-5 w-5 shrink-0 text-[#0b5cab]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z"/>
+                                                </svg>
+                                                <span class="truncate text-sm font-medium text-slate-700">{{ $item['name'] }}</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                wire:click="deleteFolder({{ \Illuminate\Support\Js::from($item['path']) }})"
+                                                wire:confirm="Boş klasör silinsin mi?"
+                                                class="shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold text-red-600 opacity-0 hover:bg-red-50 group-hover:opacity-100"
+                                            >
+                                                Sil
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($files->isNotEmpty())
+                            @if ($folders->isNotEmpty())
+                                <div class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Dosyalar</div>
+                            @endif
+                            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem;align-items:start;">
+                                @foreach ($files as $item)
                                     <div class="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 {{ $movingPath === $item['path'] ? 'ring-2 ring-amber-400' : '' }}">
                                         <button
                                             type="button"
@@ -181,9 +198,9 @@
                                             </button>
                                         </div>
                                     </div>
-                                @endif
-                            @endforeach
-                        </div>
+                                @endforeach
+                            </div>
+                        @endif
                     @endif
                 </div>
             </div>
