@@ -2,6 +2,7 @@
 
 namespace EnesEkinci\Media;
 
+use EnesEkinci\Media\Console\GenerateThumbnailsCommand;
 use EnesEkinci\Media\Livewire\MediaPicker;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
@@ -22,6 +23,10 @@ class MediaServiceProvider extends ServiceProvider
         Blade::component('media::components.media-button', 'admin.media-button');
 
         if ($this->app->runningInConsole()) {
+            $this->commands([
+                GenerateThumbnailsCommand::class,
+            ]);
+
             $this->publishes([
                 __DIR__.'/../config/media.php' => config_path('media.php'),
             ], 'media-config');

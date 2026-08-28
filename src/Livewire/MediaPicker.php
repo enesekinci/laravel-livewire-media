@@ -2,6 +2,7 @@
 
 namespace EnesEkinci\Media\Livewire;
 
+use EnesEkinci\Media\Support\Thumbnail;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -141,7 +142,10 @@ class MediaPicker extends Component
         }
 
         try {
-            $this->upload->storePublicly($this->currentDirectory(), $this->disk());
+            $stored = $this->upload->storePublicly($this->currentDirectory(), $this->disk());
+            if ($stored && config('media.thumb.generate', true)) {
+                Thumbnail::generate(Storage::disk($this->disk()), $stored);
+            }
             $this->status = $this->t('file_uploaded');
         } catch (\Throwable $e) {
             $this->error = $this->t('upload_failed', ['error' => $e->getMessage()]);
@@ -212,6 +216,7 @@ class MediaPicker extends Component
 
         try {
             Storage::disk($disk)->move($from, $to);
+            Thumbnail::move(Storage::disk($disk), $from, $to);
             $this->status = $this->t('file_moved');
             $this->movingPath = null;
         } catch (\Throwable $e) {
@@ -224,6 +229,7 @@ class MediaPicker extends Component
         $disk = $this->disk();
 
         if (Storage::disk($disk)->exists($path)) {
+            Thumbnail::delete(Storage::disk($disk), $path);
             Storage::disk($disk)->delete($path);
             $this->status = $this->t('file_deleted');
         }
@@ -313,14 +319,14 @@ class MediaPicker extends Component
     }
 
     /**
-     * @return list<array{type: string, path: string, name: string, url?: string, lastModified?: int}>
+     * @return list<array{type: string, path: string, name: string, url?: string, thumb_url?: string}>
      */
     public function entries(): array
     {
         $disk = $this->disk();
         $storage = Storage::disk($disk);
         $dir = $this->currentDirectory();
-        $limit = max(1, (int) config('media.limit', 120));
+        $limit = max(1, (int) config('media.limit', 60));
         $search = mb_strtolower(trim($this->search));
 
         try {
@@ -352,35 +358,37 @@ class MediaPicker extends Component
             ->values();
 
         $fileItems = collect($files)
-            ->reject(fn (string $path) => basename($path) === '.keep')
+            ->reject(fn (string $path) => basename($path) === '.keep' || str_ends_with(strtolower($path), '.thumb.webp'))
             ->filter(function (string $path) use ($search) {
                 if ($search === '') {
                     return true;
                 }
 
                 return str_contains(mb_strtolower(basename($path)), $search);
-            })
-            ->map(function (string $path) use ($storage) {
-                try {
-                    $lastModified = $storage->lastModified($path);
-                } catch (\Throwable) {
-                    $lastModified = 0;
-                }
+            });
+
+        $listedPaths = collect($files)->flip();
+
+        $fileItems = $fileItems
+            ->map(function (string $path) use ($storage, $listedPaths) {
+                $url = $storage->url($path);
+                $thumbPath = Thumbnail::path($path);
+                $thumbUrl = $listedPaths->has($thumbPath) ? $storage->url($thumbPath) : $url;
 
                 return [
                     'type' => 'file',
                     'path' => $path,
                     'name' => basename($path),
-                    'url' => $storage->url($path),
-                    'lastModified' => $lastModified,
+                    'url' => $url,
+                    'thumb_url' => $thumbUrl,
                 ];
             })
-            ->sortByDesc('lastModified')
+            ->sortByDesc('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->take($limit)
             ->values();
 
         return $folderItems
             ->concat($fileItems)
-            ->take($limit)
             ->values()
             ->all();
     }

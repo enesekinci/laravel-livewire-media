@@ -117,8 +117,12 @@
                 <div
                     class="min-h-0 flex-1 overflow-y-auto p-4"
                     wire:loading.class="opacity-60"
-                    wire:target="upload,deleteFile,deleteFolder,createFolder,moveHere,search,openFolder"
+                    wire:target="upload,deleteFile,deleteFolder,createFolder,moveHere,search,openFolder,goUp,goToCrumb"
                 >
+                    <div wire:loading wire:target="openFolder,goUp,goToCrumb" class="mb-3 flex items-center gap-2 text-sm text-slate-500">
+                        <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        {{ __('media::messages.loading_folder') }}
+                    </div>
                     @if (count($entries) === 0)
                         <div class="flex h-full min-h-[16rem] flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 px-4 text-center text-sm text-slate-500">
                             <p class="font-medium text-slate-600">{{ __('media::messages.empty_title') }}</p>
@@ -175,10 +179,11 @@
                                         >
                                             <div style="aspect-ratio:1/1;overflow:hidden;background:#fff;">
                                                 <img
-                                                    src="{{ $item['url'] }}"
+                                                    src="{{ $item['thumb_url'] }}"
                                                     alt="{{ $item['name'] }}"
                                                     style="width:100%;height:100%;object-fit:cover;"
                                                     loading="lazy"
+                                                    decoding="async"
                                                 >
                                             </div>
                                             <div class="truncate px-2 py-1.5 text-[11px] text-slate-600">{{ $item['name'] }}</div>

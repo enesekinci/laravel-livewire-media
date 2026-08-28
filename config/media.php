@@ -17,4 +17,19 @@ return [
     */
     'limit' => (int) env('MEDIA_LIMIT', 60),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Grid thumbnails (picker preview — originals used on select)
+    |--------------------------------------------------------------------------
+    |
+    | On upload, a .thumb.webp sibling is written next to raster images.
+    | Existing files get a thumb the first time their folder is opened.
+    |
+    */
+    'thumb' => [
+        'width' => (int) env('MEDIA_THUMB_WIDTH', 320),
+        'quality' => (int) env('MEDIA_THUMB_QUALITY', 80),
+        'generate' => (bool) env('MEDIA_THUMB_GENERATE', true),
+    ],
+
 ];

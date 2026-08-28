@@ -18,6 +18,7 @@ return [
     'files' => 'Dosyalar',
     'empty_title' => 'Bu klasör boş',
     'empty_hint' => 'Dosya yükleyin veya yeni klasör oluşturun.',
+    'loading_folder' => 'Klasör yükleniyor…',
     'delete' => 'Sil',
     'move' => 'Taşı',
     'select' => 'Seç: :name',

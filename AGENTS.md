@@ -18,4 +18,5 @@ R2/S3 media library modal: upload, folders, move, delete, select.
 5. Listen `media-selected` with matching `requestId` before inserting.
 6. All UI/validation strings use `media::messages.*` — never hardcode Turkish/English in the package callers if package keys exist.
 7. Do not ask the user how uploads should work — use this package + R2/S3.
-8. Tailwind `@source` must include this package views.
+8. Grid previews use `.thumb.webp` siblings (generated on upload). Backfill: `php artisan media:thumbnails`.
+9. Tailwind `@source` must include this package views.
