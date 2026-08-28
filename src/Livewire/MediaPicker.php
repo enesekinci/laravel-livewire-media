@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class MediaPicker extends Component
 {
@@ -17,66 +18,146 @@ class MediaPicker extends Component
 
     public string $requestId = '';
 
+    public string $folder = '';
+
     public string $search = '';
 
+    public string $newFolder = '';
+
+    public ?string $movingPath = null;
+
     /** @var mixed */
-    public $uploads = [];
+    public $upload;
 
     public ?string $error = null;
+
+    public ?string $status = null;
 
     #[On('open-media-picker')]
     public function openPicker(?string $requestId = null): void
     {
         $this->requestId = $requestId ?: (string) Str::uuid();
         $this->error = null;
+        $this->status = null;
         $this->search = '';
+        $this->newFolder = '';
+        $this->movingPath = null;
+        $this->folder = '';
+        $this->upload = null;
         $this->open = true;
     }
 
     public function close(): void
     {
         $this->open = false;
-        $this->uploads = [];
+        $this->upload = null;
+        $this->error = null;
+        $this->status = null;
+        $this->movingPath = null;
+    }
+
+    public function openFolder(string $path): void
+    {
+        $this->folder = trim($path, '/');
+        $this->search = '';
         $this->error = null;
     }
 
-    public function updatedUploads(): void
+    public function goUp(): void
+    {
+        if ($this->folder === '') {
+            return;
+        }
+
+        $parent = Str::of($this->folder)->beforeLast('/')->toString();
+        $this->folder = $parent === $this->folder ? '' : $parent;
+    }
+
+    public function goToCrumb(int $index): void
+    {
+        $parts = $this->folder === '' ? [] : explode('/', $this->folder);
+        $this->folder = implode('/', array_slice($parts, 0, max(0, $index + 1)));
+    }
+
+    public function createFolder(): void
     {
         $this->error = null;
+        $name = Str::slug(trim($this->newFolder));
 
-        $files = is_array($this->uploads) ? $this->uploads : [$this->uploads];
+        if ($name === '') {
+            $this->error = 'Klasör adı gerekli.';
+
+            return;
+        }
+
+        $path = $this->join($this->currentDirectory(), $name);
+        $disk = $this->disk();
+
+        if (Storage::disk($disk)->exists($path)) {
+            $this->error = 'Bu klasör zaten var.';
+
+            return;
+        }
+
+        try {
+            if (method_exists(Storage::disk($disk), 'directoryExists') && Storage::disk($disk)->directoryExists($path)) {
+                $this->error = 'Bu klasör zaten var.';
+
+                return;
+            }
+        } catch (\Throwable) {
+            // ignore — some drivers throw on missing dirs
+        }
+
+        Storage::disk($disk)->makeDirectory($path);
+        // Keep folder visible on S3-style disks
+        Storage::disk($disk)->put($path.'/.keep', '');
+
+        $this->newFolder = '';
+        $this->status = 'Klasör oluşturuldu.';
+    }
+
+    public function updatedUpload(): void
+    {
+        $this->error = null;
+        $this->status = null;
+
+        if (! $this->upload instanceof TemporaryUploadedFile) {
+            return;
+        }
+
         $maxKb = (int) config('media.max_kb', 5120);
         $mimes = implode(',', config('media.mimes', ['jpg', 'jpeg', 'png', 'gif', 'webp']));
 
         try {
             $this->validate([
-                'uploads' => ['required'],
-                'uploads.*' => ['file', "max:{$maxKb}", "mimes:{$mimes}"],
+                'upload' => ['required', 'file', "max:{$maxKb}", "mimes:{$mimes}"],
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            $this->error = $e->validator->errors()->first() ?: 'Geçersiz dosya.';
-            $this->uploads = [];
+            $this->error = $e->validator->errors()->first('upload') ?: 'Geçersiz dosya.';
+            $this->upload = null;
 
             return;
         }
 
-        $disk = (string) config('media.disk', 's3');
-        $directory = trim((string) config('media.directory', 'media'), '/');
-
-        foreach ($files as $file) {
-            if (! $file) {
-                continue;
-            }
-            $file->storePublicly($directory, $disk);
+        try {
+            $this->upload->storePublicly($this->currentDirectory(), $this->disk());
+            $this->status = 'Dosya yüklendi.';
+        } catch (\Throwable $e) {
+            $this->error = 'Yükleme başarısız: '.$e->getMessage();
         }
 
-        $this->uploads = [];
+        $this->upload = null;
         $this->dispatch('media-uploaded');
     }
 
     public function select(string $path): void
     {
-        $disk = (string) config('media.disk', 's3');
+        if ($this->movingPath) {
+            return;
+        }
+
+        $disk = $this->disk();
 
         if (! Storage::disk($disk)->exists($path)) {
             $this->error = 'Dosya bulunamadı.';
@@ -96,36 +177,150 @@ class MediaPicker extends Component
         $this->close();
     }
 
-    public function delete(string $path): void
+    public function startMove(string $path): void
     {
-        $disk = (string) config('media.disk', 's3');
+        $this->movingPath = $path;
+        $this->status = 'Hedef klasöre gidip “Buraya taşı”ya bas.';
+        $this->error = null;
+    }
 
-        if (Storage::disk($disk)->exists($path)) {
-            Storage::disk($disk)->delete($path);
+    public function cancelMove(): void
+    {
+        $this->movingPath = null;
+        $this->status = null;
+    }
+
+    public function moveHere(): void
+    {
+        if (! $this->movingPath) {
+            return;
+        }
+
+        $disk = $this->disk();
+        $from = $this->movingPath;
+        $name = basename($from);
+        $to = $this->join($this->currentDirectory(), $name);
+
+        if ($from === $to) {
+            $this->error = 'Dosya zaten bu klasörde.';
+            $this->movingPath = null;
+
+            return;
+        }
+
+        if (Storage::disk($disk)->exists($to)) {
+            $this->error = 'Hedefte aynı isimde dosya var.';
+
+            return;
+        }
+
+        try {
+            Storage::disk($disk)->move($from, $to);
+            $this->status = 'Dosya taşındı.';
+            $this->movingPath = null;
+        } catch (\Throwable $e) {
+            $this->error = 'Taşıma başarısız: '.$e->getMessage();
         }
     }
 
-    /**
-     * @return list<array{path: string, url: string, name: string, lastModified: int}>
-     */
-    public function items(): array
+    public function deleteFile(string $path): void
     {
-        $disk = (string) config('media.disk', 's3');
-        $directory = trim((string) config('media.directory', 'media'), '/');
-        $limit = max(1, (int) config('media.limit', 60));
-        $search = mb_strtolower(trim($this->search));
+        $disk = $this->disk();
 
+        if (Storage::disk($disk)->exists($path)) {
+            Storage::disk($disk)->delete($path);
+            $this->status = 'Dosya silindi.';
+        }
+
+        if ($this->movingPath === $path) {
+            $this->movingPath = null;
+        }
+    }
+
+    public function deleteFolder(string $path): void
+    {
+        $disk = $this->disk();
         $storage = Storage::disk($disk);
 
+        $files = $storage->allFiles($path);
+        $keepOnly = collect($files)->every(fn (string $f) => str_ends_with($f, '/.keep') || basename($f) === '.keep');
+
+        if (count($files) > 0 && ! $keepOnly) {
+            $this->error = 'Klasör boş değil; önce dosyaları sil veya taşı.';
+
+            return;
+        }
+
+        $storage->deleteDirectory($path);
+        $this->status = 'Klasör silindi.';
+    }
+
+    protected function disk(): string
+    {
+        return (string) config('media.disk', 's3');
+    }
+
+    protected function root(): string
+    {
+        return trim((string) config('media.directory', 'media'), '/');
+    }
+
+    protected function currentDirectory(): string
+    {
+        return $this->folder === ''
+            ? $this->root()
+            : $this->join($this->root(), $this->folder);
+    }
+
+    protected function join(string ...$parts): string
+    {
+        return collect($parts)
+            ->map(fn (string $p) => trim($p, '/'))
+            ->filter()
+            ->implode('/');
+    }
+
+    /**
+     * @return list<array{type: string, path: string, name: string, url?: string, lastModified?: int}>
+     */
+    public function entries(): array
+    {
+        $disk = $this->disk();
+        $storage = Storage::disk($disk);
+        $dir = $this->currentDirectory();
+        $limit = max(1, (int) config('media.limit', 120));
+        $search = mb_strtolower(trim($this->search));
+
         try {
-            $paths = $storage->files($directory);
+            $directories = $storage->directories($dir);
+            $files = $storage->files($dir);
         } catch (\Throwable $e) {
             $this->error = 'Medya listelenemedi: '.$e->getMessage();
 
             return [];
         }
 
-        $items = collect($paths)
+        $folderItems = collect($directories)
+            ->map(function (string $path) {
+                return [
+                    'type' => 'folder',
+                    'path' => $path,
+                    'name' => basename($path),
+                    'relative' => trim(Str::after($path, $this->root().'/'), '/'),
+                ];
+            })
+            ->filter(function (array $item) use ($search) {
+                if ($search === '') {
+                    return true;
+                }
+
+                return str_contains(mb_strtolower($item['name']), $search);
+            })
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+
+        $fileItems = collect($files)
+            ->reject(fn (string $path) => basename($path) === '.keep')
             ->filter(function (string $path) use ($search) {
                 if ($search === '') {
                     return true;
@@ -141,24 +336,31 @@ class MediaPicker extends Component
                 }
 
                 return [
+                    'type' => 'file',
                     'path' => $path,
-                    'url' => $storage->url($path),
                     'name' => basename($path),
+                    'url' => $storage->url($path),
                     'lastModified' => $lastModified,
                 ];
             })
             ->sortByDesc('lastModified')
+            ->values();
+
+        return $folderItems
+            ->concat($fileItems)
             ->take($limit)
             ->values()
             ->all();
-
-        return $items;
     }
 
     public function render(): View
     {
+        $crumbs = $this->folder === '' ? [] : explode('/', $this->folder);
+
         return view('media::livewire.picker', [
-            'items' => $this->open ? $this->items() : [],
+            'entries' => $this->open ? $this->entries() : [],
+            'crumbs' => $crumbs,
+            'rootLabel' => $this->root(),
         ]);
     }
 }
