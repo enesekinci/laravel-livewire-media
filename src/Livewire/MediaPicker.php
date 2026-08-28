@@ -167,12 +167,8 @@ class MediaPicker extends Component
 
         $url = Storage::disk($disk)->url($path);
 
+        // Single browser event only — Livewire also mirrors dispatch() to window.
         $this->dispatch('media-selected', requestId: $this->requestId, url: $url, path: $path);
-        $this->js(
-            'window.dispatchEvent(new CustomEvent("media-selected", { detail: '
-            .json_encode(['requestId' => $this->requestId, 'url' => $url, 'path' => $path])
-            .' }))'
-        );
 
         $this->close();
     }
