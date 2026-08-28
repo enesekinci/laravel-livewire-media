@@ -13,6 +13,7 @@ class MediaServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/media.php', 'media');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'media');
+        $this->loadTranslationsFrom(__DIR__.'/../lang', 'media');
 
         Livewire::component('media-picker', MediaPicker::class);
         Livewire::component('media.picker', MediaPicker::class);
@@ -28,6 +29,10 @@ class MediaServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../resources/views' => resource_path('views/vendor/media'),
             ], 'media-views');
+
+            $this->publishes([
+                __DIR__.'/../lang' => lang_path('vendor/media'),
+            ], 'media-lang');
         }
     }
 }

@@ -8,7 +8,7 @@
             wire:click.self="close"
             role="dialog"
             aria-modal="true"
-            aria-label="Medya yöneticisi"
+            aria-label="{{ __('media::messages.title') }}"
             style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(15,23,42,.55);backdrop-filter:blur(2px);"
         >
             <div
@@ -17,15 +17,15 @@
             >
                 <div class="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
                     <div>
-                        <h2 class="text-base font-semibold text-slate-800">Medya yöneticisi</h2>
-                        <p class="text-xs text-slate-500">Yükle · klasörle · taşı · sil · seç</p>
+                        <h2 class="text-base font-semibold text-slate-800">{{ __('media::messages.title') }}</h2>
+                        <p class="text-xs text-slate-500">{{ __('media::messages.subtitle') }}</p>
                     </div>
                     <button
                         type="button"
                         wire:click="close"
                         class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
                     >
-                        Kapat
+                        {{ __('media::messages.close') }}
                     </button>
                 </div>
 
@@ -42,7 +42,7 @@
                     @endforeach
                     @if ($folder !== '')
                         <button type="button" wire:click="goUp" class="ml-2 rounded border border-slate-200 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-50">
-                            Üst klasör
+                            {{ __('media::messages.parent_folder') }}
                         </button>
                     @endif
                 </div>
@@ -50,8 +50,8 @@
                 {{-- Toolbar --}}
                 <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-3">
                     <label class="relative inline-flex cursor-pointer items-center gap-2 overflow-hidden rounded-lg bg-[#0b5cab] px-3 py-2 text-sm font-semibold text-white hover:bg-[#094a8f]">
-                        <span wire:loading.remove wire:target="upload">Dosya yükle</span>
-                        <span wire:loading wire:target="upload">Yükleniyor…</span>
+                        <span wire:loading.remove wire:target="upload">{{ __('media::messages.upload') }}</span>
+                        <span wire:loading wire:target="upload">{{ __('media::messages.uploading') }}</span>
                         <input
                             type="file"
                             style="position:absolute;inset:0;opacity:0;cursor:pointer;"
@@ -65,7 +65,7 @@
                             type="text"
                             wire:model="newFolder"
                             wire:keydown.enter.prevent="createFolder"
-                            placeholder="Yeni klasör adı"
+                            placeholder="{{ __('media::messages.new_folder_placeholder') }}"
                             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#0b5cab]"
                         >
                         <button
@@ -73,14 +73,14 @@
                             wire:click="createFolder"
                             class="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                         >
-                            Klasör
+                            {{ __('media::messages.folder') }}
                         </button>
                     </div>
 
                     <input
                         type="search"
                         wire:model.live.debounce.300ms="search"
-                        placeholder="Ara…"
+                        placeholder="{{ __('media::messages.search_placeholder') }}"
                         class="w-36 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#0b5cab]"
                     >
 
@@ -89,20 +89,23 @@
                         wire:click="$refresh"
                         class="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
                     >
-                        Yenile
+                        {{ __('media::messages.refresh') }}
                     </button>
                 </div>
 
                 @if ($movingPath)
                     <div class="flex shrink-0 items-center justify-between gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
-                        <span>Taşınıyor: <strong>{{ basename($movingPath) }}</strong></span>
+                        <span>{{ __('media::messages.moving', ['name' => basename($movingPath)]) }}</span>
                         <span class="flex gap-2">
-                            <button type="button" wire:click="moveHere" class="rounded-md bg-amber-600 px-2.5 py-1 text-xs font-semibold text-white">Buraya taşı</button>
-                            <button type="button" wire:click="cancelMove" class="rounded-md border border-amber-300 px-2.5 py-1 text-xs">İptal</button>
+                            <button type="button" wire:click="moveHere" class="rounded-md bg-amber-600 px-2.5 py-1 text-xs font-semibold text-white">{{ __('media::messages.move_here') }}</button>
+                            <button type="button" wire:click="cancelMove" class="rounded-md border border-amber-300 px-2.5 py-1 text-xs">{{ __('media::messages.cancel') }}</button>
                         </span>
                     </div>
                 @endif
 
+                @error('upload')
+                    <div class="mx-4 mt-3 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ $message }}</div>
+                @enderror
                 @if ($error)
                     <div class="mx-4 mt-3 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ $error }}</div>
                 @endif
@@ -117,8 +120,8 @@
                 >
                     @if (count($entries) === 0)
                         <div class="flex h-full min-h-[16rem] flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 px-4 text-center text-sm text-slate-500">
-                            <p class="font-medium text-slate-600">Bu klasör boş</p>
-                            <p class="mt-1">Dosya yükleyin veya yeni klasör oluşturun.</p>
+                            <p class="font-medium text-slate-600">{{ __('media::messages.empty_title') }}</p>
+                            <p class="mt-1">{{ __('media::messages.empty_hint') }}</p>
                         </div>
                     @else
                         @php
@@ -128,7 +131,7 @@
 
                         @if ($folders->isNotEmpty())
                             <div class="mb-4 flex flex-col gap-1.5">
-                                <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Klasörler</div>
+                                <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{{ __('media::messages.folders') }}</div>
                                 <div class="flex flex-col gap-1">
                                     @foreach ($folders as $item)
                                         <div class="group flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 hover:border-[#0b5cab]/40 hover:bg-white">
@@ -145,10 +148,10 @@
                                             <button
                                                 type="button"
                                                 wire:click="deleteFolder({{ \Illuminate\Support\Js::from($item['path']) }})"
-                                                wire:confirm="Boş klasör silinsin mi?"
+                                                wire:confirm="{{ __('media::messages.delete_folder_confirm') }}"
                                                 class="shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold text-red-600 opacity-0 hover:bg-red-50 group-hover:opacity-100"
                                             >
-                                                Sil
+                                                {{ __('media::messages.delete') }}
                                             </button>
                                         </div>
                                     @endforeach
@@ -158,7 +161,7 @@
 
                         @if ($files->isNotEmpty())
                             @if ($folders->isNotEmpty())
-                                <div class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Dosyalar</div>
+                                <div class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{{ __('media::messages.files') }}</div>
                             @endif
                             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem;align-items:start;">
                                 @foreach ($files as $item)
@@ -167,7 +170,7 @@
                                             type="button"
                                             wire:click="select({{ \Illuminate\Support\Js::from($item['path']) }})"
                                             class="block w-full text-left"
-                                            title="Seç: {{ $item['name'] }}"
+                                            title="{{ __('media::messages.select', ['name' => $item['name']]) }}"
                                         >
                                             <div style="aspect-ratio:1/1;overflow:hidden;background:#fff;">
                                                 <img
@@ -186,15 +189,15 @@
                                                 wire:click="startMove({{ \Illuminate\Support\Js::from($item['path']) }})"
                                                 class="rounded-md bg-white/95 px-1.5 py-0.5 text-[11px] font-semibold text-slate-700 shadow"
                                             >
-                                                Taşı
+                                                {{ __('media::messages.move') }}
                                             </button>
                                             <button
                                                 type="button"
                                                 wire:click="deleteFile({{ \Illuminate\Support\Js::from($item['path']) }})"
-                                                wire:confirm="Bu dosya silinsin mi?"
+                                                wire:confirm="{{ __('media::messages.delete_file_confirm') }}"
                                                 class="rounded-md bg-white/95 px-1.5 py-0.5 text-[11px] font-semibold text-red-600 shadow"
                                             >
-                                                Sil
+                                                {{ __('media::messages.delete') }}
                                             </button>
                                         </div>
                                     </div>

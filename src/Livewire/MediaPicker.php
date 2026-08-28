@@ -85,7 +85,7 @@ class MediaPicker extends Component
         $name = Str::slug(trim($this->newFolder));
 
         if ($name === '') {
-            $this->error = 'Klasör adı gerekli.';
+            $this->error = $this->t('folder_name_required');
 
             return;
         }
@@ -94,14 +94,14 @@ class MediaPicker extends Component
         $disk = $this->disk();
 
         if (Storage::disk($disk)->exists($path)) {
-            $this->error = 'Bu klasör zaten var.';
+            $this->error = $this->t('folder_exists');
 
             return;
         }
 
         try {
             if (method_exists(Storage::disk($disk), 'directoryExists') && Storage::disk($disk)->directoryExists($path)) {
-                $this->error = 'Bu klasör zaten var.';
+                $this->error = $this->t('folder_exists');
 
                 return;
             }
@@ -114,7 +114,7 @@ class MediaPicker extends Component
         Storage::disk($disk)->put($path.'/.keep', '');
 
         $this->newFolder = '';
-        $this->status = 'Klasör oluşturuldu.';
+        $this->status = $this->t('folder_created');
     }
 
     public function updatedUpload(): void
@@ -134,7 +134,7 @@ class MediaPicker extends Component
                 'upload' => ['required', 'file', "max:{$maxKb}", "mimes:{$mimes}"],
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            $this->error = $e->validator->errors()->first('upload') ?: 'Geçersiz dosya.';
+            $this->error = $e->validator->errors()->first('upload') ?: $this->t('invalid_file');
             $this->upload = null;
 
             return;
@@ -142,9 +142,9 @@ class MediaPicker extends Component
 
         try {
             $this->upload->storePublicly($this->currentDirectory(), $this->disk());
-            $this->status = 'Dosya yüklendi.';
+            $this->status = $this->t('file_uploaded');
         } catch (\Throwable $e) {
-            $this->error = 'Yükleme başarısız: '.$e->getMessage();
+            $this->error = $this->t('upload_failed', ['error' => $e->getMessage()]);
         }
 
         $this->upload = null;
@@ -160,7 +160,7 @@ class MediaPicker extends Component
         $disk = $this->disk();
 
         if (! Storage::disk($disk)->exists($path)) {
-            $this->error = 'Dosya bulunamadı.';
+            $this->error = $this->t('file_not_found');
 
             return;
         }
@@ -176,7 +176,7 @@ class MediaPicker extends Component
     public function startMove(string $path): void
     {
         $this->movingPath = $path;
-        $this->status = 'Hedef klasöre gidip “Buraya taşı”ya bas.';
+        $this->status = $this->t('move_hint');
         $this->error = null;
     }
 
@@ -198,24 +198,24 @@ class MediaPicker extends Component
         $to = $this->join($this->currentDirectory(), $name);
 
         if ($from === $to) {
-            $this->error = 'Dosya zaten bu klasörde.';
+            $this->error = $this->t('file_already_here');
             $this->movingPath = null;
 
             return;
         }
 
         if (Storage::disk($disk)->exists($to)) {
-            $this->error = 'Hedefte aynı isimde dosya var.';
+            $this->error = $this->t('file_exists_target');
 
             return;
         }
 
         try {
             Storage::disk($disk)->move($from, $to);
-            $this->status = 'Dosya taşındı.';
+            $this->status = $this->t('file_moved');
             $this->movingPath = null;
         } catch (\Throwable $e) {
-            $this->error = 'Taşıma başarısız: '.$e->getMessage();
+            $this->error = $this->t('move_failed', ['error' => $e->getMessage()]);
         }
     }
 
@@ -225,7 +225,7 @@ class MediaPicker extends Component
 
         if (Storage::disk($disk)->exists($path)) {
             Storage::disk($disk)->delete($path);
-            $this->status = 'Dosya silindi.';
+            $this->status = $this->t('file_deleted');
         }
 
         if ($this->movingPath === $path) {
@@ -242,13 +242,49 @@ class MediaPicker extends Component
         $keepOnly = collect($files)->every(fn (string $f) => str_ends_with($f, '/.keep') || basename($f) === '.keep');
 
         if (count($files) > 0 && ! $keepOnly) {
-            $this->error = 'Klasör boş değil; önce dosyaları sil veya taşı.';
+            $this->error = $this->t('folder_not_empty');
 
             return;
         }
 
         $storage->deleteDirectory($path);
-        $this->status = 'Klasör silindi.';
+        $this->status = $this->t('folder_deleted');
+    }
+
+
+
+    public function rules(): array
+    {
+        $maxKb = (int) config('media.max_kb', 5120);
+        $mimes = implode(',', config('media.mimes', ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']));
+
+        return [
+            'upload' => ['nullable', 'file', "max:{$maxKb}", "mimes:{$mimes}"],
+        ];
+    }
+
+    public function messages(): array
+    {
+        $max = (int) config('media.max_kb', 5120);
+
+        return [
+            'upload.max' => __('media::messages.validation.upload_max', ['max' => $max]),
+            'upload.mimes' => __('media::messages.validation.upload_mimes'),
+            'upload.required' => __('media::messages.validation.upload_required'),
+            'upload.file' => __('media::messages.validation.upload_file'),
+        ];
+    }
+
+    public function validationAttributes(): array
+    {
+        return [
+            'upload' => __('media::messages.attributes.upload'),
+        ];
+    }
+
+    protected function t(string $key, array $replace = []): string
+    {
+        return __('media::messages.'.$key, $replace);
     }
 
     protected function disk(): string
@@ -291,7 +327,7 @@ class MediaPicker extends Component
             $directories = $storage->directories($dir);
             $files = $storage->files($dir);
         } catch (\Throwable $e) {
-            $this->error = 'Medya listelenemedi: '.$e->getMessage();
+            $this->error = $this->t('list_failed', ['error' => $e->getMessage()]);
 
             return [];
         }

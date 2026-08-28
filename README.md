@@ -49,3 +49,13 @@ window.addEventListener('media-selected', (e) => {
 ## Lisans
 
 MIT
+
+## Translations
+
+Locales shipped: `en`, `tr`, `de`, `fr`, `es`, `ar`, `nl`, `it`, `pt`, `ru`.
+
+Uses Laravel `APP_LOCALE`. Publish overrides:
+
+```bash
+php artisan vendor:publish --tag=media-lang
+```

@@ -1,5 +1,5 @@
 @props([
-    'label' => 'Medya seç',
+    'label' => null,
     'accent' => '#0b5cab',
 ])
 
@@ -17,5 +17,5 @@
     x-data
     @click="$dispatch('open-media-picker', { requestId: {{ \Illuminate\Support\Js::from($requestId) }} })"
 >
-    {{ $label }}
+    {{ $label ?? __('media::messages.pick_button') }}
 </button>
