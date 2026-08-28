@@ -10,7 +10,7 @@
 <button
     type="button"
     {{ $attributes->class([
-        'inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold text-white shadow-sm',
+        'inline-flex cursor-pointer items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold text-white shadow-sm',
     ])->merge([
         'style' => 'background: '.$accent,
     ]) }}

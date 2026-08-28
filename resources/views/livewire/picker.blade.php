@@ -13,6 +13,7 @@
         >
             <div
                 wire:click.stop
+                class="[&_button]:cursor-pointer"
                 style="display:flex;flex-direction:column;width:min(960px,100%);height:min(780px,92vh);overflow:hidden;border-radius:1rem;background:#fff;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);"
             >
                 <div class="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
