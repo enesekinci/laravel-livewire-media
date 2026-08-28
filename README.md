@@ -1,18 +1,26 @@
 # Laravel Livewire Media
 
-R2 / S3 medya yöneticisi — Livewire modal: yükle, ara, seç, sil.
+R2 / S3 medya yöneticisi — Livewire modal.
+
+## Özellikler
+
+- Dosya yükleme (Livewire temporary upload → R2/S3)
+- Klasör oluştur / gezin / sil (boş klasör)
+- Dosya taşı / sil / seç
+- Arama
 
 ## Kurulum
 
 ```bash
-composer config repositories.media vcs https://github.com/enesekinci/laravel-livewire-media
-composer require enesekinci/laravel-livewire-media:^1.0
+composer require enesekinci/laravel-livewire-media:^1.1
 ```
 
-Layout’a bir kez ekle:
+Layout:
 
 ```blade
-<livewire:media-picker />
+@auth
+    <livewire:media-picker />
+@endauth
 ```
 
 `.env`:
@@ -21,30 +29,21 @@ Layout’a bir kez ekle:
 MEDIA_DISK=s3
 MEDIA_DIRECTORY=media
 AWS_URL=https://cdn.example.com
+LIVEWIRE_TEMPORARY_FILE_UPLOAD_DISK=local
 ```
 
-## Kullanım
+> `FILESYSTEM_DISK=s3` iken Livewire geçici upload’ları **local** diskte olmalı.
 
-Aç:
+## Kullanım
 
 ```js
 window.dispatchEvent(new CustomEvent('open-media-picker', {
   detail: { requestId: 'editor-1' }
 }))
-```
 
-Seçim:
-
-```js
 window.addEventListener('media-selected', (e) => {
-  console.log(e.detail.url, e.detail.path, e.detail.requestId)
+  console.log(e.detail.url)
 })
-```
-
-Buton:
-
-```blade
-<x-media-button label="Görsel seç" />
 ```
 
 ## Lisans
